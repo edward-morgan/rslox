@@ -1,13 +1,17 @@
+use std::process::exit;
 use std::{
     fs::File,
+    io::{prelude::*, stdin, stdout},
     path::Path,
-    io::{prelude::*, stdin, stdout}
 };
+
+mod scanner;
 
 /**
  * Runs a REPL
  */
 pub fn run_prompt() {
+    let mut rslox = RsLox::new();
     loop {
         print!("> ");
         let _ = stdout().flush();
@@ -17,7 +21,8 @@ pub fn run_prompt() {
             println!("");
             break;
         }
-        run(line);
+        rslox.run(line);
+        rslox.had_error = false;
     }
 }
 
@@ -25,39 +30,50 @@ pub fn run_prompt() {
  * Reads from a file with rslox statements in it
  */
 pub fn run_file(file_path: &String) -> () {
+    let mut rslox = RsLox::new();
     let path = Path::new(file_path);
     let mut file = File::open(path).unwrap();
     let mut program = String::new();
     file.read_to_string(&mut program).unwrap();
 
-    run(program);
-}
-
-fn run(program: String) {
-    let scanner = Scanner::new(program);
-    let tokens: Vec<Token> = scanner.scan_tokens();
-    for token in tokens {
-        println!("{:?}", token);
+    rslox.run(program);
+    if rslox.had_error {
+        exit(65);
     }
 }
 
-struct Scanner {
-    source: String,
+/**
+ * Core program runner
+ */
+pub struct RsLox {
+    had_error: bool,
 }
-impl Scanner {
+impl RsLox {
+    pub fn new() -> Self {
+        RsLox { had_error: false }
+    }
+
     /**
-     * Initialize a Scanner from a source of program instructions.
+     * Evaluate a string of tokens and execute them.
      */
-    pub fn new(source: String) -> Scanner {
-        Scanner { source }
+    fn run(&mut self, program: String) {
+        let scanner = scanner::Scanner::new(program);
+        let tokens: Vec<scanner::Token> = scanner.scan_tokens();
+        for token in tokens {
+            println!("{:?}", token);
+        }
     }
 
-    pub fn scan_tokens(&self) -> Vec<Token> {
-        println!("unimplemented");
-        Vec::new()
-    }
-}
+    /*
+     * Error handling
+     */
 
-#[derive(Debug)]
-struct Token {
+    pub fn error(&mut self, line: u32, message: String) {
+        self.report(line, String::from(""), message);
+    }
+
+    fn report(&mut self, line: u32, where_at: String, message: String) {
+        eprintln!("[line {}] Error {}: {}", line, where_at, message);
+        self.had_error = true;
+    }
 }
