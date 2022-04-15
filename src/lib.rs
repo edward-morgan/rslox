@@ -57,9 +57,13 @@ impl RsLox {
      * Evaluate a string of tokens and execute them.
      */
     fn run(&mut self, program: String) {
-        let scanner = scanner::Scanner::new(program);
-        let tokens: Vec<scanner::Token> = scanner.scan_tokens();
-        for token in tokens {
+        let mut scanner = scanner::Scanner::new(program);
+        let res: Result<(), String> = scanner.scan_tokens();
+        if res.is_err() {
+            self.error(scanner.line, res.err().unwrap());
+            exit(1);
+        }
+        for token in scanner.tokens {
             println!("{:?}", token);
         }
     }
