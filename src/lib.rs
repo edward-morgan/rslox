@@ -1,11 +1,17 @@
 use std::process::exit;
 use std::{
+    any,
     fs::File,
     io::{prelude::*, stdin, stdout},
     path::Path,
 };
 
 mod scanner;
+
+pub enum Either<L, R> {
+    Left(L),
+    Right(R),
+}
 
 /**
  * Runs a REPL
@@ -40,6 +46,10 @@ pub fn run_file(file_path: &String) -> () {
     if rslox.had_error {
         exit(65);
     }
+}
+
+pub fn err(line: u32, msg: &str) -> Result<(), String> {
+    Err(format!("{}: `{}`", line, msg))
 }
 
 /**

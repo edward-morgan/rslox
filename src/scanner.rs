@@ -1,18 +1,25 @@
 use std::any::Any;
+use crate::err;
 
 pub struct Scanner {
     source: Vec<u8>,
     pub tokens: Vec<Token>,
     pub start: usize,
     pub cur: usize,
-    pub line: u32
+    pub line: u32,
 }
 impl Scanner {
     /**
      * Initialize a Scanner from a source of program instructions.
      */
     pub fn new(source: String) -> Scanner {
-        Scanner { source: source.bytes().collect(), tokens: vec![], start: 0, cur: 0, line: 1}
+        Scanner {
+            source: source.bytes().collect(),
+            tokens: vec![],
+            start: 0,
+            cur: 0,
+            line: 1,
+        }
     }
 
     pub fn scan_tokens(&mut self) -> Result<(), String> {
@@ -23,7 +30,12 @@ impl Scanner {
                 return res;
             }
         }
-        Ok(self.tokens.push(Token::new(TokenType::Eof, "".to_string(), Box::new(0), self.line)))
+        Ok(self.tokens.push(Token::new(
+            TokenType::Eof,
+            "".to_string(),
+            Box::new(0),
+            self.line,
+        )))
     }
 
     fn scan_token(&mut self) -> Result<(), String> {
@@ -39,15 +51,89 @@ impl Scanner {
             '-' => Ok(self.add_token(TokenType::Minus)),
             '+' => Ok(self.add_token(TokenType::Plus)),
             ';' => Ok(self.add_token(TokenType::Semicolon)),
-            '/' => Ok(self.add_token(TokenType::Slash)),
             '*' => Ok(self.add_token(TokenType::Star)),
-            x => Err(format!("Unexpected token `{}` ({}).", x, x as usize))
-        }    
+            '!' => {
+                let matched_char = if self.match_char('=') {
+                    TokenType::BangEqual
+                } else {
+                    TokenType::Bang
+                };
+                Ok(self.add_token(matched_char))
+            }
+            '=' => {
+                let matched_char = if self.match_char('=') {
+                    TokenType::EqualEqual
+                } else {
+                    TokenType::Equal
+                };
+                Ok(self.add_token(matched_char))
+            }
+            '<' => {
+                let matched_char = if self.match_char('=') {
+                    TokenType::LessEqual
+                } else {
+                    TokenType::Less
+                };
+                Ok(self.add_token(matched_char))
+            }
+            '>' => {
+                let matched_char = if self.match_char('=') {
+                    TokenType::GreaterEqual
+                } else {
+                    TokenType::Greater
+                };
+                Ok(self.add_token(matched_char))
+            }
+            '/' => {
+                if self.match_char('/') {
+                    // If a comment, advance to the end of the line
+                    while self.peek() != '\n' && self.cur < self.source.len() {
+                        self.advance();
+                    }
+                    Ok(())
+                } else {
+                    Ok(self.add_token(TokenType::Slash))
+                }
+            }
+            // Ignore whitespace
+            ' ' | '\r' | '\t' => Ok(()),
+            '\n' => Ok(self.line += 1),
+            '"' => self.string(),
+            x => err(self.line, format!("Unexpected token `{}` ({}).", x, x as usize).as_str()),
+        }
     }
 
+    /**
+     * Conditionally advance `cur` based on whether the current character matches `expected`. `cur` is advanced _after_
+     * the comparison.
+     */
+    fn match_char(&mut self, expected: char) -> bool {
+        if self.cur == self.source.len() || self.source[self.cur] as char != expected {
+            false
+        } else {
+            self.cur += 1;
+            true
+        }
+    }
+
+    /**
+     * Return the next character without advancing `cur`.
+     */
+    fn peek(&self) -> char {
+        if self.cur == self.source.len() {
+            '\0'
+        } else {
+            self.source[self.cur] as char
+        }
+    }
+
+    /**
+     * Returns the u8 at the current position in the scanner and increments the current position _afterwards_.
+     */
     fn advance(&mut self) -> u8 {
+        let res = self.source[self.cur];
         self.cur += 1;
-        return self.source[self.cur]
+        return res;
     }
 
     fn add_token(&mut self, token_t: TokenType) {
@@ -56,7 +142,37 @@ impl Scanner {
 
     fn _add_token(&mut self, token_t: TokenType, literal: Box<dyn Any>) {
         let text: &[u8] = &self.source[self.start..self.cur];
-        self.tokens.push(Token::new(token_t, String::from_utf8(text.to_vec()).ok().unwrap(), literal, self.line));
+        self.tokens.push(Token::new(
+            token_t,
+            String::from_utf8(text.to_vec()).ok().unwrap(),
+            literal,
+            self.line,
+        ));
+    }
+
+    fn string(&mut self) -> Result<(), String> {
+        while self.peek() != '"' && !self.cur < self.source.len() {
+            self.advance();
+        }
+
+        if self.cur == self.source.len() - 1 {
+            return err(self.line, "unterminated string")
+        }
+
+        // Grab the closing '"'
+        self.advance();
+
+        match std::str::from_utf8(&self.source[(self.start - 1)..(self.cur - 1)]) {
+            Ok(v) => {
+                let s = String::from(v);
+                self._add_token(TokenType::Str, Box::new(s));
+                Ok(())
+            }
+            Err(e) => {
+                println!("{}", e);
+                err(self.line, "could not parse source")
+            }
+        }
     }
 }
 
@@ -73,7 +189,7 @@ impl Token {
             token_type,
             lexeme,
             literal,
-            line
+            line,
         }
     }
 }
