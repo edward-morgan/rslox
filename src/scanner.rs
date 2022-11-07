@@ -99,6 +99,7 @@ impl Scanner {
             ' ' | '\r' | '\t' => Ok(()),
             '\n' => Ok(self.line += 1),
             '"' => self.string(),
+            x if is_digit(c) => self.number(),
             x => err(self.line, format!("Unexpected token `{}` ({}).", x, x as usize).as_str()),
         }
     }
@@ -117,13 +118,24 @@ impl Scanner {
     }
 
     /**
-     * Return the next character without advancing `cur`.
+     * Return the current character without advancing `cur`.
      */
     fn peek(&self) -> char {
         if self.cur == self.source.len() {
             '\0'
         } else {
             self.source[self.cur] as char
+        }
+    }
+
+    /**
+     * Return the next character without advancing `cur`. Use for single-character lookahead.
+     */
+    fn peek_next(&self) -> char {
+        if self.cur + 1 > self.source.len() { 
+            '\0'
+        } else {
+            self.source[self.cur + 1] as char
         }
     }
 
@@ -150,6 +162,41 @@ impl Scanner {
         ));
     }
 
+    fn number(&mut self) -> Result<(), String> {
+        let mut num: Vec<u8> = vec![];
+        // Grab all digits
+        while is_digit(self.peek()) {
+            num.push(self.advance());
+        }
+
+        // Look for a decimal and consume it
+        if self.peek() == '.' && is_digit(self.peek_next()) {
+            num.push(self.advance());
+        }
+
+        // Consume the fractional part
+        while is_digit(self.peek()) {
+            num.push(self.advance());
+        }
+
+        let num_str: String = String::from_utf8(num).unwrap();
+        match num_str.parse::<f64>() {
+            Ok(n) => {
+                self._add_token(TokenType::Number, Box::new(n));
+                Ok(())
+            }
+            Err(exc) => {
+                println!("{}", exc);
+                err(self.line, format!("could not parse number `{}`", num_str).as_str())
+            }
+                
+        }
+
+    }
+
+    /**
+     * Parse a string out-may be multiple characters. Returns an error if the string is unterminated. Multi-line strings are allowed.
+     */
     fn string(&mut self) -> Result<(), String> {
         while self.peek() != '"' && !self.cur < self.source.len() {
             self.advance();
@@ -174,6 +221,10 @@ impl Scanner {
             }
         }
     }
+}
+
+fn is_digit(c: char) -> bool {
+    return c >= '0' && c <= '9'
 }
 
 #[derive(Debug)]
