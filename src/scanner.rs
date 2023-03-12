@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::collections::HashMap;
 use crate::err;
 
 pub struct Scanner {
@@ -7,6 +8,7 @@ pub struct Scanner {
     pub start: usize,
     pub cur: usize,
     pub line: u32,
+    pub reserved_identifiers: HashMap<String, TokenType>,
 }
 impl Scanner {
     /**
@@ -19,8 +21,10 @@ impl Scanner {
             start: 0,
             cur: 0,
             line: 1,
+            reserved_identifiers: reserved_identifiers(),
         }
     }
+
 
     pub fn scan_tokens(&mut self) -> Result<(), String> {
         while self.cur < self.source.len() {
@@ -91,6 +95,23 @@ impl Scanner {
                         self.advance();
                     }
                     Ok(())
+                } else if self.match_char('*') {
+                    // If a multiline comment, advance until you see the closing */
+                    let mut end_matched = false;
+                    let mut star_found = false;
+                    while !end_matched && self.cur < self.source.len() {
+                        self.advance();
+                        if self.peek() == '/' && star_found {
+                            self.advance();
+                            break;
+                        }
+                        if self.peek() == '*' {
+                            star_found = true;
+                        } else {
+                            star_found = false;
+                        }
+                    }
+                    Ok(())
                 } else {
                     Ok(self.add_token(TokenType::Slash))
                 }
@@ -99,8 +120,12 @@ impl Scanner {
             ' ' | '\r' | '\t' => Ok(()),
             '\n' => Ok(self.line += 1),
             '"' => self.string(),
-            x if is_digit(c) => self.number(),
-            x => err(self.line, format!("Unexpected token `{}` ({}).", x, x as usize).as_str()),
+            x if is_digit(x) => self.number(),
+            x if is_alpha(x) => self.identifier(),
+            x => {
+                println!("Current tokens: {:?}", self.tokens);
+                err(self.line, format!("Unexpected token `{}` ({}).", x, x as usize).as_str())
+            },
         }
     }
 
@@ -198,10 +223,10 @@ impl Scanner {
      * Parse a string out-may be multiple characters. Returns an error if the string is unterminated. Multi-line strings are allowed.
      */
     fn string(&mut self) -> Result<(), String> {
-        while self.peek() != '"' && !self.cur < self.source.len() {
+        while self.peek() != '"' && self.cur < self.source.len() {
             self.advance();
         }
-
+        
         if self.cur == self.source.len() - 1 {
             return err(self.line, "unterminated string")
         }
@@ -221,10 +246,68 @@ impl Scanner {
             }
         }
     }
+
+    /**
+     * Parse an identifier, which may be multiple characters. After identifier scanning has completed, the resulting token will be checked
+     * to see if it matches any reserved words; this can only be done after scanning because of the requirement for maximal munch.
+     */
+    fn identifier(&mut self) -> Result<(), String> {
+        while is_alphanumeric(self.peek()) && self.cur < self.source.len() {
+            self.advance();
+        }
+        
+        match std::str::from_utf8(&self.source[(self.start - 1)..(self.cur - 1)]) {
+            Ok(v) => {
+                let s = String::from(v);
+                match self.reserved_identifiers.get(&s) {
+                    Some(reserved) => self._add_token(*reserved, Box::new(s)),
+                    None => self._add_token(TokenType::Str, Box::new(s)),
+                }
+                Ok(())
+            }
+            Err(e) => {
+                println!("{}", e);
+                err(self.line, "could not parse source")
+            }
+        }
+    }
 }
 
 fn is_digit(c: char) -> bool {
-    return c >= '0' && c <= '9'
+    c >= '0' && c <= '9'
+}
+
+fn is_alpha(c: char) -> bool {
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_')
+}
+
+fn is_alphanumeric(c: char) -> bool {
+    is_digit(c) || is_alpha(c)
+}
+
+/**
+ * Set the list of reserved words to be used.
+ */
+fn reserved_identifiers() -> HashMap<String, TokenType> {
+    // Populate reserved identifiers
+    let mut reserved_identifiers = HashMap::<String, TokenType>::new();
+    reserved_identifiers.insert(String::from("and"), TokenType::And);
+    reserved_identifiers.insert(String::from("class"), TokenType::Class);
+    reserved_identifiers.insert(String::from("else"), TokenType::Else);
+    reserved_identifiers.insert(String::from("false"), TokenType::False);
+    reserved_identifiers.insert(String::from("for"), TokenType::For);
+    reserved_identifiers.insert(String::from("func"), TokenType::Func);
+    reserved_identifiers.insert(String::from("if"), TokenType::If);
+    reserved_identifiers.insert(String::from("nil"), TokenType::Nil);
+    reserved_identifiers.insert(String::from("or"), TokenType::Or);
+    reserved_identifiers.insert(String::from("print"), TokenType::Print);
+    reserved_identifiers.insert(String::from("return"), TokenType::Return);
+    reserved_identifiers.insert(String::from("super"), TokenType::Super);
+    reserved_identifiers.insert(String::from("this"), TokenType::This);
+    reserved_identifiers.insert(String::from("true"), TokenType::True);
+    reserved_identifiers.insert(String::from("var"), TokenType::Var);
+    reserved_identifiers.insert(String::from("while"), TokenType::While);
+    return reserved_identifiers;
 }
 
 #[derive(Debug)]
@@ -246,7 +329,7 @@ impl Token {
 }
 
 // Debug is good enough here, it prints the enum name
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum TokenType {
     // One-character tokens
     LeftParen,
