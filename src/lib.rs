@@ -5,12 +5,31 @@ use std::{
     io::{prelude::*, stdin, stdout},
     path::Path,
 };
+use scanner::*;
+use syntax_tree::*;
+use parser::*;
 
 mod scanner;
+mod syntax_tree;
+mod parser;
 
 pub enum Either<L, R> {
     Left(L),
     Right(R),
+}
+
+pub fn print_ast() {
+    let expr = Expr::Binary(
+        Box::new(Expr::Unary(
+            Box::new(Expr::IntLiteral(123 as i64)),
+            Token::new(TokenType::Minus, "-".to_string(), Box::new(""), 1),
+        )),
+        Token::new(TokenType::Star, "*".to_string(), Box::new(""), 1),
+        Box::new(Expr::Grouping(
+            Box::new(Expr::FloatLiteral(45.67)),
+        ))
+    );
+    println!("{}", visit(expr));
 }
 
 /**
@@ -73,9 +92,10 @@ impl RsLox {
             self.error(scanner.line, res.err().unwrap());
             exit(1);
         }
-        for token in scanner.tokens {
+        for token in &scanner.tokens {
             println!("{:?}", token);
         }
+        parse_tokens(&scanner.tokens, 0, &mut Expr::StringLiteral(String::from("")))
     }
 
     /*

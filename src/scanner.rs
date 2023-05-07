@@ -318,7 +318,7 @@ pub struct Token {
     pub line: u32,
 }
 impl Token {
-    fn new(token_type: TokenType, lexeme: String, literal: Box<dyn Any>, line: u32) -> Token {
+    pub fn new(token_type: TokenType, lexeme: String, literal: Box<dyn Any>, line: u32) -> Token {
         Token {
             token_type,
             lexeme,

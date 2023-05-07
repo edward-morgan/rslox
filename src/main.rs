@@ -4,6 +4,7 @@ use rslox::*;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
+    print_ast();
     if args.len() > 2 {
         println!("Usage: rlox [script]");
         exit(64);
