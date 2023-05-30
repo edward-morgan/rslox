@@ -329,7 +329,7 @@ impl Token {
 }
 
 // Debug is good enough here, it prints the enum name
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TokenType {
     // One-character tokens
     LeftParen,

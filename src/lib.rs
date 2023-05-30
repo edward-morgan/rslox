@@ -95,7 +95,7 @@ impl RsLox {
         for token in &scanner.tokens {
             println!("{:?}", token);
         }
-        parse_tokens(&scanner.tokens, 0, &mut Expr::StringLiteral(String::from("")))
+        // parse_tokens(&scanner.tokens, 0, &mut Expr::StringLiteral(String::from("")))
     }
 
     /*
