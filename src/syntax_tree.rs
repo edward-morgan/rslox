@@ -1,6 +1,7 @@
 use core::any::Any;
 use crate::scanner::Token;
 
+#[derive(Debug)]
 pub enum Expr {
     // Literal(Box<dyn Any>),
     StringLiteral(String),

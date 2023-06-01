@@ -97,11 +97,12 @@ impl Scanner {
                     Ok(())
                 } else if self.match_char('*') {
                     // If a multiline comment, advance until you see the closing */
-                    let mut end_matched = false;
                     let mut star_found = false;
-                    while !end_matched && self.cur < self.source.len() {
+                    while self.cur < self.source.len() {
                         self.advance();
-                        if self.peek() == '/' && star_found {
+                        if self.peek() == '\n' {
+                            self.line += 1;
+                        } else if self.peek() == '/' && star_found {
                             self.advance();
                             break;
                         }
@@ -224,6 +225,9 @@ impl Scanner {
      */
     fn string(&mut self) -> Result<(), String> {
         while self.peek() != '"' && self.cur < self.source.len() {
+            if self.peek() == '\n' {
+                self.line += 1;
+            }
             self.advance();
         }
         

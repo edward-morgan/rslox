@@ -95,7 +95,11 @@ impl RsLox {
         for token in &scanner.tokens {
             println!("{:?}", token);
         }
-        // parse_tokens(&scanner.tokens, 0, &mut Expr::StringLiteral(String::from("")))
+        let mut p: Parser = Parser::new(scanner.tokens);
+        match expression(&mut p) {
+            Ok(expr) => println!("{:?}", expr),
+            Err(e) => panic!("{}", e),
+        }
     }
 
     /*
