@@ -1,7 +1,6 @@
 use crate::scanner::*;
 use crate::syntax_tree::*;
-use crate::RsLox;
-
+use std::collections::VecDeque;
 /*
 Grammar:
 expression     → equality ;
@@ -15,17 +14,16 @@ primary        → NUMBER | STRING | "true" | "false" | "nil"
                | "(" expression ")" ;
 */
 pub struct Parser {
-    tokens: Vec<Token>,
+    tokens: VecDeque<Token>,
     cur: i32,
 }
 impl Parser {
   pub fn new(tk: Vec<Token>) -> Self {
-    Parser { tokens: tk, cur: 0 }
+    Parser { tokens: VecDeque::from(tk), cur: 0 }
   }
 }
 
 pub fn expression(p: &mut Parser) -> Result<Expr, String> {
-    println!("Parsing an expression...");
     equality(p)
 }
 
@@ -35,12 +33,14 @@ fn binary_expr(
     token_match: &[TokenType],
 ) -> Result<Expr, String> {
     match sub_expr(p) {
-        Ok(mut left) => {
+        Ok(evaluated) => {
+            let mut left = evaluated;
             loop {
+                // println!("[binary_expr() w/{:?}] Current left: {:?}", token_match, left);
                 if p.tokens.len() == 0 {
                     return Ok(left);
                 } else if token_matches(&p.tokens[p.cur as usize], token_match) {
-                    let op: Token = p.tokens.pop().unwrap();
+                    let op: Token = p.tokens.pop_front().unwrap();
                     match sub_expr(p) {
                         Ok(right) => left = Expr::Binary(Box::new(left), op, Box::new(right)),
                         e2 @ Err(_) => return e2,
@@ -85,28 +85,25 @@ fn unary(p: &mut Parser) -> Result<Expr, String> {
     if p.tokens.len() == 0 {
       parse_error(&Token::new(TokenType::Eof, String::from(""), Box::new(-1), 0), String::from("reached EOF"))
     } else {
-        let t = p.tokens.pop().unwrap();
+        let t = p.tokens.pop_front().unwrap();
         if token_matches(&t, &[TokenType::Bang, TokenType::Minus]) {
             // Recursive unary
-            // let right = unary(p);
-            // Expr::Unary(Box::new(right), t)
             match unary(p) {
                 Ok(right) => Ok(Expr::Unary(Box::new(right), t)),
                 e @ Err(_) => e,
             }
         } else {
             // Primary
-            primary(p)
+            primary(p, t)
         }
     }
 }
 
-fn primary(p: &mut Parser) -> Result<Expr, String> {
+fn primary(p: &mut Parser, t: Token) -> Result<Expr, String> {
     if p.tokens.len() == 0 {
       // TODO: How to grab the line?
       parse_error(&Token::new(TokenType::Eof, String::from(""), Box::new(-1), 0), String::from("reached EOF"))
     } else {
-        let t = p.tokens.pop().unwrap();
         if token_matches(&t, &[TokenType::False]) {
             Ok(Expr::BoolLiteral(false))
         } else if token_matches(&t, &[TokenType::True]) {
@@ -130,7 +127,7 @@ fn primary(p: &mut Parser) -> Result<Expr, String> {
                     if p.tokens.len() == 0 {
                       parse_error(&t, String::from("reached EOF"))
                     } else {
-                        let end = p.tokens.pop().unwrap();
+                        let end = p.tokens.pop_front().unwrap();
                         if token_matches(&end, &[TokenType::RightParen]) {
                             Ok(Expr::Grouping(Box::new(sub)))
                         } else {

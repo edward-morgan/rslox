@@ -1,11 +1,5 @@
 // this is a comment
-(( )){} // grouping stuff
-!*+-/=<> <= == // operators
-"Hello, 
-world!"
-908.56
-1234
-func go()
+1234 == ("Hello, world!" == "one")
 /* .   
 Hello*/
 
