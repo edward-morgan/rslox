@@ -114,6 +114,7 @@ fn primary(p: &mut Parser, t: Token) -> Result<Expr, String> {
             match t.lexeme.parse::<i64>() {
                 Err(_) => {
                     // Handle errors here
+                    println!("HERE");
                     let res = t.lexeme.parse::<f64>().unwrap();
                     Ok(Expr::FloatLiteral(res))
                 }

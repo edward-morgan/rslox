@@ -97,8 +97,8 @@ impl RsLox {
         }
         let mut p: Parser = Parser::new(scanner.tokens);
         match expression(&mut p) {
-            Ok(expr) => println!("{:?}", expr),
-            Err(e) => panic!("{}", e),
+            Ok(expr) => println!("{}", visit(expr)),
+            Err(e) => println!("{}", e),
         }
     }
 

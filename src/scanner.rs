@@ -121,7 +121,7 @@ impl Scanner {
             ' ' | '\r' | '\t' => Ok(()),
             '\n' => Ok(self.line += 1),
             '"' => self.string(),
-            x if is_digit(x) => self.number(),
+            x if is_digit(x) => self.number(x),
             x if is_alpha(x) => self.identifier(),
             x => {
                 println!("Current tokens: {:?}", self.tokens);
@@ -188,8 +188,8 @@ impl Scanner {
         ));
     }
 
-    fn number(&mut self) -> Result<(), String> {
-        let mut num: Vec<u8> = vec![];
+    fn number(&mut self, start: char) -> Result<(), String> {
+        let mut num: Vec<u8> = vec![start as u8];
         // Grab all digits
         while is_digit(self.peek()) {
             num.push(self.advance());
@@ -205,6 +205,7 @@ impl Scanner {
             num.push(self.advance());
         }
 
+        println!("{:?}", num);
         let num_str: String = String::from_utf8(num).unwrap();
         match num_str.parse::<f64>() {
             Ok(n) => {
@@ -212,12 +213,9 @@ impl Scanner {
                 Ok(())
             }
             Err(exc) => {
-                println!("{}", exc);
-                err(self.line, format!("could not parse number `{}`", num_str).as_str())
+                err(self.line, format!("could not parse number `{}`: {}", num_str, exc).as_str())
             }
-                
         }
-
     }
 
     /**
@@ -260,7 +258,7 @@ impl Scanner {
             self.advance();
         }
         
-        match std::str::from_utf8(&self.source[(self.start - 1)..(self.cur - 1)]) {
+        match std::str::from_utf8(&self.source[self.start..(self.cur - 1)]) {
             Ok(v) => {
                 let s = String::from(v);
                 match self.reserved_identifiers.get(&s) {

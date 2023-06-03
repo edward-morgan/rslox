@@ -15,6 +15,7 @@ pub enum Expr {
 }
 
 pub fn visit(e: Expr) -> String {
+    println!("Raw expression: {:?}", e);
     match e {
         // Expr::Literal(t) => { 
         //     if let Some(v) = (*t).downcast_ref::<String>() {
