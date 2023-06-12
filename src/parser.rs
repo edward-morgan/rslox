@@ -3,7 +3,9 @@ use crate::syntax_tree::*;
 use std::collections::VecDeque;
 /*
 Grammar:
-expression     → equality ;
+expression     → equality ( "," equality )* 
+               | ternary ;
+ternary        → equality "?" expression ":" expression ;
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term           → factor ( ( "-" | "+" ) factor )* ;
@@ -24,7 +26,18 @@ impl Parser {
 }
 
 pub fn expression(p: &mut Parser) -> Result<Expr, String> {
-    equality(p)
+    // let left = equality(p);
+    let left = binary_expr(p, equality, &[TokenType::Comma]);
+    if token_matches(&p.tokens[p.cur as usize], &[TokenType::QuestionMark]) {
+        p.tokens.pop_front().unwrap();
+        match binary_expr(p, expression, &[TokenType::Colon]) {
+            Ok(Expr::Binary(if_true, _, if_false)) => Ok(Expr::Ternary(Box::new(left.unwrap()), if_true, if_false)),
+            Ok(_) => Err(format!("Unable to parse rhs of ternary.")),
+            e @ Err(_) => e
+        }
+    } else {
+        left
+    }
 }
 
 fn binary_expr(
@@ -43,9 +56,12 @@ fn binary_expr(
                     let op: Token = p.tokens.pop_front().unwrap();
                     match sub_expr(p) {
                         Ok(right) => left = Expr::Binary(Box::new(left), op, Box::new(right)),
-                        e2 @ Err(_) => return e2,
+                        e2 @ Err(_) => {
+                            return e2
+                        }
                     }
                 } else {
+                    // println!("Returning {:?}", left);
                     break;
                 }
             }
@@ -114,7 +130,6 @@ fn primary(p: &mut Parser, t: Token) -> Result<Expr, String> {
             match t.lexeme.parse::<i64>() {
                 Err(_) => {
                     // Handle errors here
-                    println!("HERE");
                     let res = t.lexeme.parse::<f64>().unwrap();
                     Ok(Expr::FloatLiteral(res))
                 }

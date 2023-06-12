@@ -1,6 +1,6 @@
 // this is a comment
-1234 == ("Hello, world!" == "one")
+// 1234 == ("Hello, world!" == "one")
 /* .   
 Hello*/
-
 /**/
+3 > 10 ? 3 : 10

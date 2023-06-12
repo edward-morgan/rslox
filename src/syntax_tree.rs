@@ -11,30 +11,12 @@ pub enum Expr {
     NilLiteral(),
     Unary(Box<Expr>, Token),
     Binary(Box<Expr>, Token, Box<Expr>),
+    Ternary(Box<Expr>, Box<Expr>, Box<Expr>),
     Grouping(Box<Expr>),
 }
 
 pub fn visit(e: Expr) -> String {
-    println!("Raw expression: {:?}", e);
     match e {
-        // Expr::Literal(t) => { 
-        //     if let Some(v) = (*t).downcast_ref::<String>() {
-        //         format!("{}", v)
-        //     } 
-        //     else {
-        //         if let Some(f) = (*t).downcast_ref::<f64>() {
-        //             format!("{}", f)
-        //         }
-        //         else {
-        //             if let Some(i) = (*t).downcast_ref::<i64>() {
-        //                 format!("{}", i)
-        //             }
-        //             else {
-        //                 format!("UNKNOWN TYPE")
-        //             }
-        //         }
-        //     }
-        // },
         Expr::StringLiteral(v) => format!("{}", v),
         Expr::IntLiteral(v) => format!("{}", v),
         Expr::FloatLiteral(v) => format!("{}", v),
@@ -42,6 +24,7 @@ pub fn visit(e: Expr) -> String {
         Expr::NilLiteral() => format!("nil"),
         Expr::Unary(e, t) => format!("( {} {} )", t.lexeme, visit(*e)),
         Expr::Binary(e1, t, e2) => format!("( {} {} {} )", t.lexeme, visit(*e1), visit(*e2)),
+        Expr::Ternary(e1, e2, e3) => format!("( {} ? {} : {} )", visit(*e1), visit(*e2), visit(*e3)),
         Expr::Grouping(e) => format!("( {} )", visit(*e)),
     }
 }

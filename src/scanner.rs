@@ -56,6 +56,8 @@ impl Scanner {
             '+' => Ok(self.add_token(TokenType::Plus)),
             ';' => Ok(self.add_token(TokenType::Semicolon)),
             '*' => Ok(self.add_token(TokenType::Star)),
+            '?' => Ok(self.add_token(TokenType::QuestionMark)),
+            ':' => Ok(self.add_token(TokenType::Colon)),
             '!' => {
                 let matched_char = if self.match_char('=') {
                     TokenType::BangEqual
@@ -99,18 +101,19 @@ impl Scanner {
                     // If a multiline comment, advance until you see the closing */
                     let mut star_found = false;
                     while self.cur < self.source.len() {
-                        self.advance();
                         if self.peek() == '\n' {
                             self.line += 1;
                         } else if self.peek() == '/' && star_found {
                             self.advance();
                             break;
-                        }
-                        if self.peek() == '*' {
+                        } else if self.peek() == '*' {
                             star_found = true;
                         } else {
                             star_found = false;
                         }
+                        // Don't advance until the end of the loop iteration. This is because match_char also advances, so we don't want to skip
+                        // over the character immediately following the '/*'
+                        self.advance();
                     }
                     Ok(())
                 } else {
@@ -345,6 +348,8 @@ pub enum TokenType {
     Semicolon,
     Slash,
     Star,
+    QuestionMark,
+    Colon,
 
     // // One- or two-character tokens
     Bang,
