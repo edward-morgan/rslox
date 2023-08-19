@@ -9,9 +9,12 @@ use scanner::*;
 use syntax_tree::*;
 use parser::*;
 
+use crate::interpreter::interpret;
+
 mod scanner;
 mod syntax_tree;
 mod parser;
+mod interpreter;
 
 pub enum Either<L, R> {
     Left(L),
@@ -97,7 +100,13 @@ impl RsLox {
         }
         let mut p: Parser = Parser::new(scanner.tokens);
         match expression(&mut p) {
-            Ok(expr) => println!("{}", visit(expr)),
+            Ok(expr) => {
+                match interpret(expr) {
+                    // TODO: why are result values string?
+                    Ok(v) => println!("Result: {:?}", visit_any(v)),
+                    Err(msg) => println!("{}", msg)
+                }
+            }
             Err(e) => println!("{}", e),
         }
     }
