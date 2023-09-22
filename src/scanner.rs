@@ -208,7 +208,7 @@ impl Scanner {
             num.push(self.advance());
         }
 
-        println!("{:?}", num);
+        // println!("{:?}", num);
         let num_str: String = String::from_utf8(num).unwrap();
         match num_str.parse::<f64>() {
             Ok(n) => {

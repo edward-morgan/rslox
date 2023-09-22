@@ -95,15 +95,16 @@ impl RsLox {
             self.error(scanner.line, res.err().unwrap());
             exit(1);
         }
-        for token in &scanner.tokens {
-            println!("{:?}", token);
-        }
+        // Print each token
+        // for token in &scanner.tokens {
+        //     println!("{:?}", token);
+        // }
         let mut p: Parser = Parser::new(scanner.tokens);
         match expression(&mut p) {
             Ok(expr) => {
                 match interpret(expr) {
                     // TODO: why are result values string?
-                    Ok(v) => println!("Result: {:?}", visit_any(v)),
+                    Ok(v) => println!("{}", visit_any(v)), //println!(": {:?}", visit_any(v)),
                     Err(msg) => println!("{}", msg)
                 }
             }

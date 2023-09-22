@@ -26,17 +26,19 @@ impl Parser {
 }
 
 pub fn expression(p: &mut Parser) -> Result<Expr, String> {
-    // let left = equality(p);
-    let left = binary_expr(p, equality, &[TokenType::Comma]);
-    if token_matches(&p.tokens[p.cur as usize], &[TokenType::QuestionMark]) {
-        p.tokens.pop_front().unwrap();
-        match binary_expr(p, expression, &[TokenType::Colon]) {
-            Ok(Expr::Binary(if_true, _, if_false)) => Ok(Expr::Ternary(Box::new(left.unwrap()), if_true, if_false)),
-            Ok(_) => Err(format!("Unable to parse rhs of ternary.")),
-            e @ Err(_) => e
-        }
-    } else {
-        left
+    match binary_expr(p, equality, &[TokenType::Comma]) {
+        left @ Ok(_) =>
+        if token_matches(&p.tokens[p.cur as usize], &[TokenType::QuestionMark]) {
+            p.tokens.pop_front().unwrap();
+            match binary_expr(p, expression, &[TokenType::Colon]) {
+                Ok(Expr::Binary(if_true, _, if_false)) => Ok(Expr::Ternary(Box::new(left.unwrap()), if_true, if_false)),
+                Ok(_) => Err(format!("Unable to parse rhs of ternary.")),
+                e @ Err(_) => e
+            }
+        } else {
+            left
+        },
+        x@ Err(_) => x
     }
 }
 
